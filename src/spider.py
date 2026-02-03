@@ -47,9 +47,9 @@ def get_params(url: str, params: str) -> OptionalStr:
         return query_params[params][0]
 
 
-async def get_play_url_list(m3u8: str, proxy: OptionalStr = None, header: OptionalDict = None,
+async def get_play_url_list(m3u8: str, proxy_addr: OptionalStr = None, header: OptionalDict = None,
                             abroad: bool = False) -> List[str]:
-    resp = await async_req(url=m3u8, proxy_addr=proxy, headers=header, abroad=abroad)
+    resp = await async_req(url=m3u8, proxy_addr=proxy_addr, headers=header, abroad=abroad)
     play_url_list = []
     for i in resp.split('\n'):
         if i.startswith('https://'):
@@ -1648,7 +1648,7 @@ async def login_popkontv(
 
     try:
         proxy_addr = utils.handle_proxy_addr(proxy_addr)
-        async with httpx.AsyncClient(proxy=proxy_addr, timeout=20, verify=False) as client:
+        async with httpx.AsyncClient(proxies=proxy_addr, timeout=20, verify=False) as client:
             response = await client.post(url, json=data, headers=headers)
             response.raise_for_status()
 
@@ -3039,11 +3039,11 @@ async def get_taobao_stream_url(url: str, proxy_addr: OptionalStr = None, cookie
     if '_m_h5_tk' not in headers['Cookie']:
         print('Error: Cookies is empty! please input correct cookies')
 
-    live_id = get_params(url, 'id')
+    live_id = get_params(url, 'id') or get_params(url, 'liveId')
     if not live_id:
         html_str = await async_req(url, proxy_addr=proxy_addr, headers=headers)
         redirect_url = re.findall("var url = '(.*?)';", html_str)[0]
-        live_id = get_params(redirect_url, 'id')
+        live_id = get_params(redirect_url, 'id') or get_params(redirect_url, 'liveId')
 
     params = {
         'jsv': '2.7.0',
@@ -3069,8 +3069,14 @@ async def get_taobao_stream_url(url: str, proxy_addr: OptionalStr = None, cookie
         sign = execjs.compile(open(f'{JS_SCRIPT_PATH}/taobao-sign.js').read()).call('sign', pre_sign_str)
         params |= {'sign': sign, 't': t13}
         api = f'https://h5api.m.taobao.com/h5/mtop.mediaplatform.live.livedetail/4.0/?{urllib.parse.urlencode(params)}'
-        jsonp_str, new_cookie = await async_req(url=api, proxy_addr=proxy_addr, headers=headers, timeout=20,
+        response_result = await async_req(url=api, proxy_addr=proxy_addr, headers=headers, timeout=20,
                                                 return_cookies=True, include_cookies=True)
+        if isinstance(response_result, tuple):
+            jsonp_str, new_cookie = response_result
+        else:
+            print(f"Taobao API request failed: {response_result}")
+            continue
+
         json_data = utils.jsonp_to_json(jsonp_str)
 
         ret_msg = json_data['ret']

@@ -165,3 +165,7 @@ cython_debug/
 #.idea/
 
 backup_config/
+
+# FFmpeg binaries
+ffmpeg/
+ffmpeg*.zip

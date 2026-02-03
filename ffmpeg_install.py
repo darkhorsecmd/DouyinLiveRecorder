@@ -22,6 +22,9 @@ execute_dir = os.path.split(os.path.realpath(sys.argv[0]))[0]
 current_env_path = os.environ.get('PATH')
 ffmpeg_path = os.path.join(execute_dir, 'ffmpeg')
 
+if os.path.exists(ffmpeg_path):
+    os.environ['PATH'] = ffmpeg_path + os.pathsep + current_env_path
+
 
 def unzip_file(zip_path: str | Path, extract_to: str | Path, delete: bool = True) -> None:
     if not os.path.exists(extract_to):
@@ -53,7 +56,7 @@ def get_lanzou_download_link(url: str, password: str | None = None) -> str | Non
         }
         response = requests.post('https://wweb.lanzouv.com/ajaxm.php', headers=headers, data=data)
         json_data = response.json()
-        download_url = json_data['dom'] + "/file/" + json_data['url']
+        download_url = str(json_data['dom']) + "/file/" + str(json_data['url'])
         response = requests.get(download_url, headers=headers)
         return response.url
     except Exception as e:
