@@ -1130,18 +1130,18 @@ def start_record(url_data: tuple, count_variable: int = -1) -> None:
 
                                 if start_pushed:
                                     if over_show_push:
-                                    push_content = "直播间状态更新：[直播间名称] 直播已结束！时间：[时间]"
-                                    if over_push_message_text:
-                                        push_content = over_push_message_text
+                                        push_content = "直播间状态更新：[直播间名称] 直播已结束！时间：[时间]"
+                                        if over_push_message_text:
+                                            push_content = over_push_message_text
 
-                                    push_content = (push_content.replace('[直播间名称]', record_name).
-                                                    replace('[时间]', push_at))
-                                    threading.Thread(
-                                        target=push_message,
-                                        args=(record_name, record_url, push_content.replace(r'\n', '\n')),
-                                        daemon=True
-                                    ).start()
-                                start_pushed = False
+                                        push_content = (push_content.replace('[直播间名称]', record_name).
+                                                        replace('[时间]', push_at))
+                                        threading.Thread(
+                                            target=push_message,
+                                            args=(record_name, record_url, push_content.replace(r'\n', '\n')),
+                                            daemon=True
+                                        ).start()
+                                    start_pushed = False
 
                         else:
                             content = f"\r{record_name} 正在直播中..."
