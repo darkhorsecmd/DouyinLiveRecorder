@@ -79,6 +79,18 @@ os_type = os.name
 clear_command = "cls" if os_type == 'nt' else "clear"
 color_obj = utils.Color()
 os.environ['PATH'] = ffmpeg_path + os.pathsep + current_env_path
+is_web_mode = os.environ.get("WEB_MODE") == "true"
+
+if is_web_mode:
+    # Disable Colors in Web Mode
+    utils.Color.RED = ""
+    utils.Color.GREEN = ""
+    utils.Color.YELLOW = ""
+    utils.Color.BLUE = ""
+    utils.Color.MAGENTA = ""
+    utils.Color.CYAN = ""
+    utils.Color.WHITE = ""
+    utils.Color.RESET = ""
 
 
 def signal_handler(_signal, _frame):
@@ -96,21 +108,24 @@ def display_info() -> None:
             sys.stdout.flush()
             time.sleep(5)
             if Path(sys.executable).name != 'pythonw.exe':
-                os.system(clear_command)
-            print(f"\r共监测{monitoring}个直播中", end=" | ")
-            print(f"同一时间访问网络的线程数: {max_request}", end=" | ")
-            print(f"是否开启代理录制: {'是' if use_proxy else '否'}", end=" | ")
-            if split_video_by_time:
-                print(f"录制分段开启: {split_time}秒", end=" | ")
-            else:
-                print("录制分段开启: 否", end=" | ")
-            if create_time_file:
-                print("是否生成时间文件: 是", end=" | ")
-            print(f"录制视频质量为: {video_record_quality}", end=" | ")
-            print(f"录制视频格式为: {video_save_type}", end=" | ")
-            print(f"目前瞬时错误数为: {error_count}", end=" | ")
+                if not is_web_mode: os.system(clear_command)
+            
+            if not is_web_mode:
+                print(f"\r共监测{monitoring}个直播中", end=" | ")
+                print(f"同一时间访问网络的线程数: {max_request}", end=" | ")
+                print(f"是否开启代理录制: {'是' if use_proxy else '否'}", end=" | ")
+                if split_video_by_time:
+                    print(f"录制分段开启: {split_time}秒", end=" | ")
+                else:
+                    print("录制分段开启: 否", end=" | ")
+                if create_time_file:
+                    print("是否生成时间文件: 是", end=" | ")
+                print(f"录制视频质量为: {video_record_quality}", end=" | ")
+                print(f"录制视频格式为: {video_save_type}", end=" | ")
+                print(f"目前瞬时错误数为: {error_count}", end=" | ")
+            
             now = time.strftime("%H:%M:%S", time.localtime())
-            print(f"当前时间: {now}")
+            if not is_web_mode: print(f"当前时间: {now}")
 
             # Web Status Update
             try:
@@ -149,21 +164,22 @@ def display_info() -> None:
             if len(recording) == 0:
                 time.sleep(5)
                 if monitoring == 0:
-                    print("\r没有正在监测和录制的直播")
+                    if not is_web_mode: print("\r没有正在监测和录制的直播")
                 else:
-                    print(f"\r没有正在录制的直播 循环监测间隔时间：{delay_default}秒")
+                    if not is_web_mode: print(f"\r没有正在录制的直播 循环监测间隔时间：{delay_default}秒")
             else:
                 now_time = datetime.datetime.now()
-                print("x" * 60)
-                no_repeat_recording = list(set(recording))
-                print(f"正在录制{len(no_repeat_recording)}个直播: ")
-                for recording_live in no_repeat_recording:
-                    rt, qa = recording_time_list[recording_live]
-                    have_record_time = now_time - rt
-                    print(f"{recording_live}[{qa}] 正在录制中 {str(have_record_time).split('.')[0]}")
-
-                # print('\n本软件已运行：'+str(now_time - start_display_time).split('.')[0])
-                print("x" * 60)
+                if not is_web_mode:
+                    print("x" * 60)
+                    no_repeat_recording = list(set(recording))
+                    print(f"正在录制{len(no_repeat_recording)}个直播: ")
+                    for recording_live in no_repeat_recording:
+                        rt, qa = recording_time_list[recording_live]
+                        have_record_time = now_time - rt
+                        print(f"{recording_live}[{qa}] 正在录制中 {str(have_record_time).split('.')[0]}")
+    
+                    # print('\n本软件已运行：'+str(now_time - start_display_time).split('.')[0])
+                    print("x" * 60)
                 start_display_time = now_time
         except Exception as e:
             logger.error(f"错误信息: {e} 发生错误的行数: {e.__traceback__.tb_lineno}")
@@ -351,7 +367,7 @@ def adjust_max_request() -> None:
 
             if pre_max_request != max_request:
                 pre_max_request = max_request
-                print(f"\r同一时间访问网络的线程数动态改为 {max_request}")
+                if not is_web_mode: print(f"\r同一时间访问网络的线程数动态改为 {max_request}")
 
         error_window.append(error_count)
         if len(error_window) > error_window_size:
@@ -1110,10 +1126,10 @@ def start_record(url_data: tuple, count_variable: int = -1) -> None:
 
                         push_at = datetime.datetime.today().strftime('%Y-%m-%d %H:%M:%S')
                         if port_info['is_live'] is False:
-                            print(f"\r{record_name} 等待直播... ")
+                                if not is_web_mode: print(f"\r{record_name} 等待直播... ")
 
-                            if start_pushed:
-                                if over_show_push:
+                                if start_pushed:
+                                    if over_show_push:
                                     push_content = "直播间状态更新：[直播间名称] 直播已结束！时间：[时间]"
                                     if over_push_message_text:
                                         push_content = over_push_message_text
@@ -1129,7 +1145,7 @@ def start_record(url_data: tuple, count_variable: int = -1) -> None:
 
                         else:
                             content = f"\r{record_name} 正在直播中..."
-                            print(content)
+                            if not is_web_mode: print(content)
 
                             if live_status_push and not start_pushed:
                                 if begin_show_push:
@@ -1652,7 +1668,7 @@ def start_record(url_data: tuple, count_variable: int = -1) -> None:
 
                 if error_count > 20:
                     x = x + 60
-                    color_obj.print_colored("\r瞬时错误太多,延迟加60秒", color_obj.YELLOW)
+                    if not is_web_mode: color_obj.print_colored("\r瞬时错误太多,延迟加60秒", color_obj.YELLOW)
 
                 # 这里是.如果录制结束后,循环时间会暂时变成30s后检测一遍. 这样一定程度上防止主播卡顿造成少录
                 # 当30秒过后检测一遍后. 会回归正常设置的循环秒数
@@ -1669,10 +1685,10 @@ def start_record(url_data: tuple, count_variable: int = -1) -> None:
                 while x:
                     x = x - 1
                     if loop_time:
-                        print(f'\r{anchor_name}循环等待{x}秒 ', end="")
+                        if not is_web_mode: print(f'\r{anchor_name}循环等待{x}秒 ', end="")
                     time.sleep(1)
                 if loop_time:
-                    print('\r检测直播间中...', end="")
+                    if not is_web_mode: print('\r检测直播间中...', end="")
         except Exception as e:
             logger.error(f"错误信息: {e} 发生错误的行数: {e.__traceback__.tb_lineno}")
             with max_request_lock:

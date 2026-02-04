@@ -90,11 +90,14 @@ async def start_recorder():
         log_f = open(LOG_FILE, 'a', encoding='utf-8')
         
         # Use Popen with unbuffered output (-u)
+        env = os.environ.copy()
+        env["WEB_MODE"] = "true"
         recorder_process = subprocess.Popen(
             [python_exe, "-u", MAIN_SCRIPT],
             cwd=SCRIPT_PATH,
             stdout=log_f,
-            stderr=subprocess.STDOUT
+            stderr=subprocess.STDOUT,
+            env=env
         )
         return {"status": "success", "message": "Started"}
     except Exception as e:
