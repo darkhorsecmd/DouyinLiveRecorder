@@ -9,6 +9,9 @@ import os
 import signal
 import sys
 import json
+import webbrowser
+import threading
+import time
 
 app = FastAPI()
 
@@ -151,5 +154,11 @@ async def save_url_config(request: Request):
     return {"status": "error"}
 
 if __name__ == "__main__":
+    def open_browser():
+        time.sleep(2)
+        print("Opening browser at http://localhost:8000")
+        webbrowser.open("http://localhost:8000")
+
     print("Starting Web Interface on http://localhost:8000")
+    threading.Thread(target=open_browser, daemon=True).start()
     uvicorn.run(app, host="0.0.0.0", port=8000)
