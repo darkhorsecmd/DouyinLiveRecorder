@@ -21,6 +21,7 @@ import re
 import shutil
 import random
 import uuid
+import json
 from pathlib import Path
 import urllib.request
 from urllib.error import URLError, HTTPError
@@ -110,6 +111,23 @@ def display_info() -> None:
             print(f"目前瞬时错误数为: {error_count}", end=" | ")
             now = time.strftime("%H:%M:%S", time.localtime())
             print(f"当前时间: {now}")
+
+            # Web Status Update
+            try:
+                status_data = {
+                    "monitoring": monitoring,
+                    "max_request": max_request,
+                    "running_count": len(recording),
+                    "recording_list": list(recording),
+                    "error_count": error_count,
+                    "update_time": now,
+                    "video_quality": video_record_quality,
+                    "video_format": video_save_type
+                }
+                with open(f'{script_path}/config/web_status.json', 'w', encoding='utf-8') as f:
+                    json.dump(status_data, f, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
 
             if len(recording) == 0:
                 time.sleep(5)

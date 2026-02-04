@@ -1,0 +1,236 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抖音直播录制控制台</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding-top: 20px; background-color: #f8f9fa; }
+        .card { margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .log-box { height: 400px; overflow-y: scroll; background: #1e1e1e; color: #0f0; padding: 10px; font-family: monospace; font-size: 12px; }
+        .status-badge { font-size: 1.2em; }
+        textarea { font-family: monospace; min-height: 400px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="d-flex justify-content-between align-items-center mb-4">
+            <h1>🔴 直播录制控制台</h1>
+            <div>
+                <span id="running-status" class="badge bg-secondary status-badge">检测中...</span>
+            </div>
+        </header>
+
+        <ul class="nav nav-tabs mb-3" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard" type="button">监控仪表盘</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="config-tab" data-bs-toggle="tab" data-bs-target="#config" type="button">参数设置 (Config)</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="url-tab" data-bs-toggle="tab" data-bs-target="#url" type="button">链接管理 (URL)</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="myTabContent">
+            <!-- Dashboard Tab -->
+            <div class="tab-pane fade show active" id="dashboard" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">控制操作</div>
+                            <div class="card-body d-grid gap-2">
+                                <button id="btn-start" class="btn btn-success btn-lg">启动录制</button>
+                                <button id="btn-stop" class="btn btn-danger btn-lg">停止录制</button>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">实时状态</div>
+                            <div class="card-body">
+                                <ul class="list-group list-group-flush" id="status-list">
+                                    <li class="list-group-item">等待数据...</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between">
+                                <span>运行日志</span>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="auto-scroll" checked>
+                                    <label class="form-check-label" for="auto-scroll">自动滚动</label>
+                                </div>
+                            </div>
+                            <div class="card-body p-0">
+                                <div id="log-container" class="log-box"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card mt-3">
+                    <div class="card-header">正在录制列表</div>
+                    <div class="card-body">
+                        <div id="recording-list" class="d-flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Config Tab -->
+            <div class="tab-pane fade" id="config" role="tabpanel">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between">
+                        <span>Config.ini 编辑</span>
+                        <button class="btn btn-primary btn-sm" onclick="saveConfig()">保存配置</button>
+                    </div>
+                    <div class="card-body">
+                        <textarea id="config-editor" class="form-control"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- URL Tab -->
+            <div class="tab-pane fade" id="url" role="tabpanel">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between">
+                        <span>URL_config.ini 编辑</span>
+                        <button class="btn btn-primary btn-sm" onclick="saveUrlConfig()">保存链接</button>
+                    </div>
+                    <div class="card-body">
+                        <textarea id="url-editor" class="form-control"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let isRunning = false;
+
+        // Fetch Status & Logs
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                
+                // Update Running Status
+                isRunning = data.running;
+                const badge = document.getElementById('running-status');
+                const startBtn = document.getElementById('btn-start');
+                const stopBtn = document.getElementById('btn-stop');
+                
+                if (isRunning) {
+                    badge.className = 'badge bg-success status-badge';
+                    badge.textContent = '运行中';
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                } else {
+                    badge.className = 'badge bg-secondary status-badge';
+                    badge.textContent = '已停止';
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                }
+
+                // Update Logs
+                const logBox = document.getElementById('log-container');
+                // Simple ANSI code stripping
+                const cleanLogs = data.logs.replace(/\x1b\[[0-9;]*m/g, '');
+                logBox.textContent = cleanLogs;
+                if (document.getElementById('auto-scroll').checked) {
+                    logBox.scrollTop = logBox.scrollHeight;
+                }
+
+                // Update Details
+                const statusList = document.getElementById('status-list');
+                const s = data.status || {};
+                statusList.innerHTML = `
+                    <li class="list-group-item">监控直播间: <strong>${s.monitoring || 0}</strong></li>
+                    <li class="list-group-item">正在录制: <strong>${s.running_count || 0}</strong></li>
+                    <li class="list-group-item">错误计数: <strong>${s.error_count || 0}</strong></li>
+                    <li class="list-group-item">线程数: ${s.max_request || '-'}</li>
+                    <li class="list-group-item">更新时间: ${s.update_time || '-'}</li>
+                `;
+
+                // Update Recording List
+                const recList = document.getElementById('recording-list');
+                const list = s.recording_list || [];
+                if (list.length === 0) {
+                    recList.innerHTML = '<span class="text-muted">暂无录制任务</span>';
+                } else {
+                    recList.innerHTML = list.map(item => 
+                        `<span class="badge bg-danger p-2">${item}</span>`
+                    ).join('');
+                }
+
+            } catch (e) {
+                console.error("Fetch error:", e);
+            }
+        }
+
+        // Controls
+        document.getElementById('btn-start').onclick = async () => {
+            if(!confirm("确定要启动录制吗？")) return;
+            const res = await fetch('/api/start', { method: 'POST' });
+            const data = await res.json();
+            alert(data.message);
+            fetchStatus();
+        };
+
+        document.getElementById('btn-stop').onclick = async () => {
+            if(!confirm("确定要停止录制吗？")) return;
+            const res = await fetch('/api/stop', { method: 'POST' });
+            const data = await res.json();
+            alert(data.message);
+            fetchStatus();
+        };
+
+        // Config Editors
+        async function loadConfig() {
+            const res = await fetch('/api/config');
+            const data = await res.json();
+            document.getElementById('config-editor').value = data.content;
+        }
+
+        async function saveConfig() {
+            const content = document.getElementById('config-editor').value;
+            const res = await fetch('/api/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({content})
+            });
+            const data = await res.json();
+            if(data.status === 'success') alert("配置保存成功！重启录制后生效。");
+            else alert("保存失败");
+        }
+
+        async function loadUrlConfig() {
+            const res = await fetch('/api/url_config');
+            const data = await res.json();
+            document.getElementById('url-editor').value = data.content;
+        }
+
+        async function saveUrlConfig() {
+            const content = document.getElementById('url-editor').value;
+            const res = await fetch('/api/url_config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({content})
+            });
+            const data = await res.json();
+            if(data.status === 'success') alert("链接保存成功！");
+            else alert("保存失败");
+        }
+
+        // Init
+        document.getElementById('config-tab').onclick = loadConfig;
+        document.getElementById('url-tab').onclick = loadUrlConfig;
+        
+        setInterval(fetchStatus, 2000);
+        fetchStatus();
+    </script>
+</body>
+</html>
