@@ -114,11 +114,28 @@ def display_info() -> None:
 
             # Web Status Update
             try:
+                # Calculate duration for each recording
+                rec_list = []
+                now_time = datetime.datetime.now()
+                for rec_name in list(recording):
+                    if rec_name in recording_time_list:
+                        start_time, _ = recording_time_list[rec_name]
+                        duration = now_time - start_time
+                        # Format duration as HH:MM:SS
+                        total_seconds = int(duration.total_seconds())
+                        h = total_seconds // 3600
+                        m = (total_seconds % 3600) // 60
+                        s = total_seconds % 60
+                        duration_str = f"{h:02d}:{m:02d}:{s:02d}"
+                        rec_list.append({"name": rec_name, "duration": duration_str})
+                    else:
+                        rec_list.append({"name": rec_name, "duration": "00:00:00"})
+
                 status_data = {
                     "monitoring": monitoring,
                     "max_request": max_request,
                     "running_count": len(recording),
-                    "recording_list": list(recording),
+                    "recording_list": rec_list,
                     "error_count": error_count,
                     "update_time": now,
                     "video_quality": video_record_quality,

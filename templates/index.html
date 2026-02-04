@@ -162,7 +162,10 @@
                     recList.innerHTML = '<span class="text-muted">暂无录制任务</span>';
                 } else {
                     recList.innerHTML = list.map(item => 
-                        `<span class="badge bg-danger p-2">${item}</span>`
+                        `<div class="badge bg-danger p-2 m-1">
+                            <span>${item.name}</span>
+                            <span class="badge bg-light text-dark ms-2">⏱ ${item.duration}</span>
+                        </div>`
                     ).join('');
                 }
 
